@@ -1,0 +1,2 @@
+def enjoy():
+    print('Enjoy!')
