@@ -27,7 +27,7 @@ pip-log.txt
 nosetests.xml
 
 # virtualenv
-ENV/*
+DEV/*
 
 # Translations
 *.mo
