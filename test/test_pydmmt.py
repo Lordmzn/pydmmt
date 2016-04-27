@@ -12,7 +12,7 @@ class TestPydmmt(object):
         pass
 
     def test_something(self):
-        assert pydmmt.enjoy() == 'Enjoy!'
+        assert pydmmt.step(5) == 6
 
     @classmethod
     def teardown_class(cls):
