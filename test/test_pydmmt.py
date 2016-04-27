@@ -12,7 +12,7 @@ class TestPydmmt(object):
         pass
 
     def test_something(self):
-        pass
+        assert pydmmt.enjoy() == 'Enjoy!'
 
     @classmethod
     def teardown_class(cls):

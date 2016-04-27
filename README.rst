@@ -5,7 +5,7 @@ Dynamic Meta Models Tools in Python
 .. image:: https://badge.fury.io/py/pydmmt.png
     :target: http://badge.fury.io/py/pydmmt
 
-.. image:: https://travis-ci.org/lordmzn/pydmmt.png?branch=master
+.. image:: https://travis-ci.org/Lordmzn/pydmmt.svg?branch=master
     :target: https://travis-ci.org/lordmzn/pydmmt
 
 .. image:: https://pypip.in/d/pydmmt/badge.png
