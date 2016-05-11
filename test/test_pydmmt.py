@@ -18,22 +18,24 @@ def test_pydmmt_as_a_calc():
 
 def test_fibonacci():
     """ ./pyDMMT fibonacci.py """
-    execute pyDMMT fibonacci (contains already horizon + init conditions)
-    read stdout
-    assert stdout == 144
-    assert process(pyDMMT) == dead
+    # execute pyDMMT fibonacci (contains already horizon + init conditions)
+    # read stdout
+    # assert stdout == 144
+    # assert process(pyDMMT) == dead
+    pass
 
 
 def test_fibonacci_simulation_data():
     """ ./pyDMMT fibonacci.py """
-    ask simulation_data
-    execute pyDMMT fibonacci (contains already horizon + init conditions)
-    read stdout
-    assert stdout == 144
-    assert process(pyDMMT) == dead
-    assert exist(sim_data_file)
-    read sim_data_file
-    assert n_data == expected
+    # build simulation_data
+    # execute pyDMMT fibonacci (contains already horizon + init conditions)
+    # read stdout
+    # assert stdout == 144
+    # assert process(pyDMMT) == dead
+    # assert exist(sim_data_file)
+    # read sim_data_file
+    # assert n_data == expected
+    pass
 
 
 def test_leslie_dataset_file():
