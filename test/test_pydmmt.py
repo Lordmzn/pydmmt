@@ -6,32 +6,34 @@ from pydmmt import pydmmt
 
 
 def test_pydmmt_as_a_calc():
-    """ ./pyDMMT sum.py """
+    """ sum.py """
     from subprocess import Popen, PIPE, STDOUT
-    p = Popen(["./pyDMMT", "sum.py"], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
-    output = p.communicate("3 2")
-    assert output == 5
+    p = Popen(["pydmmt/pydmmt.py", "sum.py"], stdin=PIPE, stdout=PIPE,
+              stderr=STDOUT)
+    output = p.communicate("3 2".encode('utf-8'))[0]
+    # trim the '\n' newline char
+    assert output[:-1].decode('utf-8') == 5
     # None means it's still running; negative returncode means terminated with
     # signal -r
     assert p.returncode >= 0
 
 
 def test_fibonacci():
-    """ ./pyDMMT fibonacci.py """
-    # execute pyDMMT fibonacci (contains already horizon + init conditions)
+    """ fibonacci.py """
+    # execute pydmmt fibonacci (contains already horizon + init conditions)
     # read stdout
     # assert stdout == 144
-    # assert process(pyDMMT) == dead
+    # assert process(pydmmt) == dead
     pass
 
 
 def test_fibonacci_simulation_data():
-    """ ./pyDMMT fibonacci.py """
+    """ fibonacci.py """
     # build simulation_data
-    # execute pyDMMT fibonacci (contains already horizon + init conditions)
+    # execute pydmmt fibonacci (contains already horizon + init conditions)
     # read stdout
     # assert stdout == 144
-    # assert process(pyDMMT) == dead
+    # assert process(pydmmt) == dead
     # assert exist(sim_data_file)
     # read sim_data_file
     # assert n_data == expected
@@ -39,5 +41,5 @@ def test_fibonacci_simulation_data():
 
 
 def test_leslie_dataset_file():
-    """ ./pyDMMT -d dataset.csv leslie.py """
+    """ ./pydmmt -d dataset.csv leslie.py """
     pass
