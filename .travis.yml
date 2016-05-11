@@ -17,3 +17,8 @@ install:
 # command to run tests
 script:
   - "tox -e $TOX_ENV"
+
+# tune notifications
+notifications:
+  slack: poliminrmgroup:duarbJg03TKF6J3VJT5TPd1v
+  email: false
