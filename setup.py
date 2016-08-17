@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import re
 import sys
 
 try:
@@ -21,9 +22,18 @@ Documentation
 The full documentation is at http://pydmmt.rtfd.org."""
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
+VERSIONFILE = "pydmmt/_version.py"
+verstrline = open(VERSIONFILE, "rt").read()
+VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    verstr = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
+
 setup(
     name='pydmmt',
-    version='0.1.0',
+    version=verstr,
     description='Provides tools to construct programs that simulate dynamic ' +
                 'systems of equations in Python.',
     long_description=readme + '\n\n' + doclink + '\n\n' + history,

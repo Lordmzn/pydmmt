@@ -1,0 +1,6 @@
+simulation:
+  target: ["y[i]"]   # defines target for the simulation
+  inputs: ["x1[i]", "x2[i]"]  # defines the input to start the simulation from
+
+functions:
+  - "y[i] = x1[i] + x2[i]"
