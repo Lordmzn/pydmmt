@@ -1,0 +1,7 @@
+simulation:
+  target: ["y1", "y2"]   # defines target for the simulation
+  inputs: ["x1", "x2"]  # defines the input to start the simulation from
+
+functions:
+  - "y1 = x1 + x2"
+  - "y2 = x1 ^ x2"

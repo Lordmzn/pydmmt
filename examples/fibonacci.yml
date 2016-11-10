@@ -1,0 +1,11 @@
+simulation:
+  target: ["F[12]", "F[11]"]   # defines target for the simulation
+
+logging:
+  simulation.log: ["F"]
+  output/simulation.log: ["F"]
+
+functions:
+  - "F[t] = F[t-1] + F[t-2]"
+  - "F[1] = 1"
+  - "F[0] = 0"
