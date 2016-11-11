@@ -1,6 +1,4 @@
-"""
-Tests for `pydmmt` module.
-"""
+"""Tests for `pydmmt` module."""
 import pytest
 from pydmmt import pydmmt
 
@@ -32,7 +30,9 @@ def test_fibonacci():
     output = p.communicate(" ".encode('utf-8'))[0]
     # trim the '\n' newline char
     print(output[:-1].decode('utf-8'))
-    assert [float(l) for l in output[:-1].decode('utf-8').split()] == [144, 89]
+    results = [float(l) for l in output[:-1].decode('utf-8').split()]
+    assert results[0:2] == [144, 89]
+    assert abs(results[2] - 1.6180339887) < 0.001
     assert p.returncode >= 0
 
 
@@ -46,20 +46,31 @@ def test_fibonacci_simulation_data():
     print(output[:-1].decode('utf-8'))
     assert p.returncode >= 0
     from pathlib import Path
+    import csv
+    # simulation contains only F
     simfile = Path("simulation.log")
     assert simfile.is_file()
     # read sim_data_file
     with simfile.open() as f:
-        import csv
-        spamreader = csv.reader(f, delimiter=' ', quotechar='|')
+        spamreader = csv.reader(f)
         lines = 0
         for row in spamreader:
-            assert len(row) == 1
+            assert len(row) == 2  # ['# t', 'F']
             lines += 1
     # assert n_data == expected
-    assert lines == 12
+    assert lines == 14
+    # this one instead contains F and Fidia
     simfile = Path("output/simulation.log")
     assert simfile.is_file()
+    # read sim_data_file
+    with simfile.open() as f:
+        spamreader = csv.reader(f)
+        lines = 0
+        for row in spamreader:
+            assert len(row) == 3  # ['# t', 'F', 'Fidia']
+            lines += 1
+    # assert n_data == expected
+    assert lines == 14
 
 
 def test_leslie():
@@ -101,7 +112,7 @@ def test_pydmmt_todolist_construction():
     assert not model.sim_step_todo
     #
     model = pydmmt.Model({"sources": ["examples/fibonacci.yml"]})
-    assert {'F[t]'} == set(model.sim_step_todo)
+    assert {"F[t+2]", "Fidia[t+2]"} == set(model.sim_step_todo)
 
 
 def test_pydmmt_graph_construction():
@@ -130,10 +141,10 @@ def test_pydmmt_graph_construction():
 def test_pydmmt_function_library():
     #
     model = pydmmt.Model({"sources": ["examples/calc.yml"]})
-    model.processInputData("3 4")
-    assert model.calculate("y1") == 7
-    model.processInputData(".1 .1")
-    assert model.calculate("y1", ) == 0.2
+    model._treat_input_data("3 4")
+    assert model._calculate("y1") == 7
+    model._treat_input_data(".1 .1")
+    assert model._calculate("y1", ) == 0.2
     #
     model = pydmmt.Model({"sources": ["examples/fibonacci.yml"]})
-    assert model.calculate("F[1]") == 1
+    assert model._calculate("F[1]") == 1

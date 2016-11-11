@@ -1,11 +1,12 @@
 simulation:
-  target: ["F[12]", "F[11]"]   # defines target for the simulation
+  target: ["F[12]", "F[11]", "Fidia[12]"]   # defines target for the simulation
 
 logging:
   simulation.log: ["F"]
-  output/simulation.log: ["F"]
+  output/simulation.log: ["F", "Fidia"]
 
 functions:
-  - "F[t] = F[t-1] + F[t-2]"
+  - "F[t+2] = F[t+1] + F[t]"
   - "F[1] = 1"
   - "F[0] = 0"
+  - "Fidia[t+2] = F[t+2] / F[t+1]"
