@@ -1,0 +1,23 @@
+# from M. Gatto and R. Casagrandi "Dispense del corso di Ecologia" (2003).
+# Leslie matrix.
+# Initial conditions: n1 = 40, n2 = 0, n3 = 20
+# expected output = 3264.85815961600, 1.30176322373759
+
+simulation:
+  target: ["N[10]", "AB[10]"]   # defines target for the simulation
+  inputs: ["n1[0]", "n2[0]", "n3[0]"]
+
+functions:
+  - "n1[t+1] = 1.6 * n2[t] + 1.2 * n3[t] + i1[t]"
+  - "n2[t+1] = 0.8 * n1[t] + i2[t]"
+  - "n3[t+1] = 0.7 * n2[t] + i3[t]"
+  - "N[t+1] = n1[t+1] + n2[t+1] + n3[t+1]"
+  - "AB[t+1] = N[t+1] / N[t]"
+
+external:
+  examples/leslie_inputs.csv:
+  examples/leslie_inputs_1.csv:
+  examples/leslie_inputs_i3.csv:
+
+logging:
+  leslie.log: ["N", "n1", "n2", "n3", "i1", "i2", "i3"]

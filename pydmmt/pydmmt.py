@@ -37,10 +37,9 @@ class Model:
         self.functions = dict()
         for source in params["sources"]:
             # check for field existence and emptiness
-            if "functions" not in source or not source["functions"]:
-                continue
-            for function in source["functions"]:
-                self._load_relations_from_string(function)
+            if "functions" in source and source["functions"]:
+                for function in source["functions"]:
+                    self._load_relations_from_string(function)
 
             # take care of simulation details
             if "simulation" in source and "target" in source["simulation"]:
@@ -65,6 +64,14 @@ class Model:
                  if source["logging"][filename]
                  and len(source["logging"][filename]) > 0]
 
+            # check for any external source
+            if "external" in source:
+                # create space, if it's first external source found
+                if "external" not in self.parameters:
+                    self.parameters["external"] = list()
+                # then read each logfile to produce
+                self.parameters["external"] += source["external"]
+
         # consistency check
         if not self.parameters["simulation"]["target"]:
             raise YAMLError("No target found in given YAML files")
@@ -87,8 +94,14 @@ class Model:
         else:
             self.sim_data = {v:0 for v
                              in self.parameters["simulation"]["inputs"]}
-        # print("self.sim_data: " + str(self.sim_data))  # TODO
-        # internal clock
+
+        # load external source if any
+        if "external" in self.parameters:
+            for source in self.parameters["external"]:
+                if not self._load_source(source):
+                    self.parameters["external"].remove(source)
+
+        # last but not least, initialize internal clock
         self.current_step = 0
 
     def _load_relations_from_string(self, function):
@@ -217,6 +230,50 @@ class Model:
         index_of_todo_list = [int(ut.delay_of(v)) for v in self.sim_step_todo]
         self.clock_period = max(index_of_todo_list) - min(index_of_todo_list)
         # print("self.clock_period: " + str(self.clock_period))  # TODO
+
+    def _load_source(self, source):
+        # load source content
+        with open(source, "r", newline='') as input_f:
+            if os.path.splitext(source)[1] == ".csv":
+                if not self.sim_timeline:
+                    print("Ignoring useless " + source)
+                    return
+                # read csv and store data in sim_data
+                reader = csv.reader(input_f)
+                # read first row and check if there's the t column
+                headers = next(reader)
+                if headers[0][0] != '#':
+                    print("Can't find the header for " + source)
+                    return False
+                # remove the "# " part and check for t
+                headers[0] = headers[0][2:]
+                if "t" not in headers:
+                    print("Can't find the 't' column in " + source)
+                    return False
+                # these items requires new space in self.sim_data
+                headers_to_add = [h for h in headers
+                                  if (h not in self.sim_data.dtype.names
+                                      and h != "t")]
+                if headers_to_add:
+                    sim_types = {'names': list(headers_to_add),
+                                 'formats': ['float'] * len(headers_to_add)}
+                    new_stuff = numpy.full(len(self.sim_timeline), numpy.nan,
+                                           dtype=sim_types)
+                    import numpy.lib.recfunctions as rfn
+                    self.sim_data = rfn.merge_arrays([self.sim_data, new_stuff],
+                                                     flatten=True, usemask=False)
+                # then insert each line of data into the internal container
+                for row in reader:
+                    for header, item in zip(headers, row):
+                        if header == "t":
+                            try:
+                                t = self.sim_timeline.index(int(item))
+                                continue
+                            except ValueError:
+                                # current model doesn't need data from this row
+                                break
+                        self.sim_data[header][t] = item
+            return True
 
     def process_input(self):
         try:
@@ -386,8 +443,7 @@ class Model:
         items = self.parameters["logging"][log_name]
         logger.writerow(['# t'] + items)
         for t in self.sim_timeline:
-            logger.writerow([self.sim_timeline[t]] +
-                            list(self.sim_data[items][t]))
+            logger.writerow([t] + list(self.sim_data[items][t]))
 
 
 if __name__ == "__main__":

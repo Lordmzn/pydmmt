@@ -12,11 +12,29 @@ Dynamic Meta Models Tools in Python
     :target: https://pypi.python.org/pypi/pydmmt
 
 
-Provides tools to construct programs that simulate dynamic systems of equations in Python.
+Provides tools to construct programs that simulate dynamic systems of equations
+in Python.
 
 
 Features
 --------
 
-* TODO
+* External inputs: load data from .csv files.
+  Files are identified via the keys of an associate arrays within the field
+  "external" in the YAML.
+  Each key represents the path to the file.
+  Files are interpreted as text and must start with "# "; the rest of the first
+  line is a comma separated list of strings interpreted as variable names.
+  The first should be "t", the time identifies which is matched with the
+  internal timeline.
+  If the index "t" of a specific row is not found in the internal timeline, the
+  data is discarded.
+  More than one file can be given.
+  Data for a single variable can be spread between files.
 
+* External outputs: text-based logging of the computation results can be
+  produced via the presence of the field "logging" in the YAML.
+  Each key of the associative array contained within is interpreted as path to a
+  file.
+  The value of the key in the YAML should be a list of variable names, which of
+  course will be written in the csv file.

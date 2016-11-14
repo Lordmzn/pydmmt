@@ -88,8 +88,31 @@ def test_leslie():
 
 
 def test_leslie_dataset_file():
-    """ ./pydmmt -d dataset.csv leslie.py """
-    pass
+    """ leslie_inputs.yml with inputs """
+    from subprocess import Popen, PIPE, STDOUT
+    p = Popen(["pydmmt/pydmmt.py", "examples/leslie_inputs.yml"], stdin=PIPE,
+              stdout=PIPE, stderr=STDOUT)
+    output = p.communicate("40 0 20".encode('utf-8'))[0]
+    # trim the '\n' newline char
+    print(output[:-1].decode('utf-8'))
+    results = [float(l) for l in output[:-1].decode('utf-8').split()]
+    assert abs(results[0] - 3264.85815961) < 0.000001
+    assert abs(results[1] - 1.30176322374) < 0.000001
+    assert p.returncode >= 0
+    from pathlib import Path
+    import csv
+    # simulation contains only F
+    simfile = Path("leslie.log")
+    assert simfile.is_file()
+    # read sim_data_file
+    with simfile.open() as f:
+        spamreader = csv.reader(f)
+        lines = 0
+        for row in spamreader:
+            assert len(row) == 8  # [# t,N,n1,n2,n3,i1,i2,i3]
+            lines += 1
+    # assert n_data == expected
+    assert lines == 12
 
 
 """
