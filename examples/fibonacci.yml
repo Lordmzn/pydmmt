@@ -1,5 +1,5 @@
 simulation:
-  target: ["F[12]", "F[11]", "Fidia[12]"]   # defines target for the simulation
+  target: ["F[12]", "F[11]", "Fidia[12]", "AvgFidia"]   # defines target for the simulation
 
 logging:
   simulation.log: ["F"]
@@ -10,3 +10,4 @@ functions:
   - "F[1] = 1"
   - "F[0] = 0"
   - "Fidia[t+2] = F[t+2] / F[t+1]"
+  - "AvgFidia = sum( Fidia[2:12] ) / 12"
