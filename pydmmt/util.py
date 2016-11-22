@@ -66,6 +66,8 @@ class Variable(TextBased):
         if '(' in text:
             if text.split('(')[0] in Function.accepted_functions:
                 return False
+        if text in Function.accepted_functions:
+            return False
         return True
 
 
@@ -75,25 +77,29 @@ def _power(a, b):
     return op.pow(a, b)
 
 
+def mean(a):
+    return sum(a) / len(a)
+
+
 class Function(TextBased):
     # supported operators and functions
     operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
                  ast.Div: op.truediv, ast.Pow: _power, ast.USub: op.neg}
     operators_string = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*',
                         ast.Div: '/', ast.Pow: '^', ast.USub: '-'}
-    accepted_functions = {"sum":sum, "max":max, "min":min}
+    accepted_functions = {"sum":sum, "max":max, "min":min, "mean":mean}
+    accepted_tree_nodes = (ast.Num, ast.BinOp, ast.UnaryOp, ast.Subscript,
+                           ast.Index, ast.Slice, ast.Load) + tuple(operators.keys())
 
     def __init__(self, text):
         self.original_string = text
-        equation_sides = text.split('=')
-        self.outputs = [Variable(el) for el in equation_sides[0].split()
-                        if Variable.is_it(el)]
-        self.inputs = [Variable(el) for el in equation_sides[1].split()
-                       if Variable.is_it(el)]
+        equation_sides = text.replace(')',' ').replace('(',' ').replace(',',' ').split('=')
+        self.outputs = [Variable(el) for el in equation_sides[0].split() if Variable.is_it(el)]
+        self.inputs = [Variable(el) for el in equation_sides[1].split() if Variable.is_it(el)]
 
         # parse the text and store the result
         # power operator: change ^ in **
-        text = equation_sides[1].lstrip()
+        text = text.split('=')[1].lstrip()
         text = text.replace('^', '**')
         tree = ast.parse(text, mode="eval")
         tree.lineno = 0
@@ -110,14 +116,7 @@ class Function(TextBased):
     def _check_tree(tree, variables):
         # Expression(body=UnaryOp(left=Name(id='x1', ctx=Load()), op=USub()))])
         for node in ast.walk(tree.body):
-            if (isinstance(node, ast.Num) or
-                isinstance(node, ast.BinOp) or
-                isinstance(node, ast.UnaryOp) or
-                isinstance(node, ast.Subscript) or
-                isinstance(node, ast.Index) or
-                isinstance(node, ast.Slice) or
-                type(node) in Function.operators or
-                type(node) is ast.Load):
+            if isinstance(node, Function.accepted_tree_nodes):
                 continue
             elif isinstance(node, ast.Call):
                 if node.func.id not in Function.accepted_functions:
@@ -158,14 +157,23 @@ class Function(TextBased):
                 elif isinstance(node.slice.value, ast.Name):
                     var_str += 't'
                 var_str += ']'
-            # if var[1:12]
+            # if var[1:12] or var[:12] or var [123:]
             if isinstance(node.slice, ast.Slice):
-                if (isinstance(node.slice.lower, ast.Num) and
-                    isinstance(node.slice.upper, ast.Num)):
-                    var_str += '[' + str(node.slice.lower.n) + ':' + str(node.slice.upper.n) + ']'
+                if isinstance(node.slice.lower, ast.Num):
+                    if isinstance(node.slice.upper, ast.Num):
+                        var_str += '[' + str(node.slice.lower.n) + ':' + str(node.slice.upper.n) + ']'
+                    elif not node.slice.upper:
+                        var_str += '[' + str(node.slice.lower.n) + ':]'
+                elif not node.slice.lower:
+                    if isinstance(node.slice.upper, ast.Num):
+                        var_str += '[:' + str(node.slice.upper.n) + ']'
+                    elif not node.slice.upper:
+                        var_str += '[:]'
                 else:
-                    raise NotImplementedError
+                    raise NotImplementedError(ast.dump(node))
+            # print("input ", Variable(var_str), " recognized? ", Variable(var_str) in self.f.inputs)  # TODO
             if Variable(var_str) not in self.f.inputs:
+                print(Variable(var_str), "in", self.f.inputs)  # TODO
                 raise YAMLError(ast.dump(node))
             text = ("self.inputs[" +
                     str(self.f.inputs.index(Variable(var_str))) +

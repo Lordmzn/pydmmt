@@ -48,16 +48,18 @@ class Model:
 
             if "simulation" in source and "inputs" in source["simulation"]:
                 items = [ut.Variable(item) for item in source["simulation"]["inputs"] if ut.Variable.is_it(item)]
-                self.parameters["simulation"]["inputs"] += [item for item in items if not item.is_relatively_indexed]
+                assert not any(item.is_relatively_indexed for item in items)
+                self.parameters["simulation"]["inputs"] += items
+                self.input_data = {item:0 for item in items if not item.is_indexed}
 
             # check for any logging requirement
             if "logging" in source:
                 # create space, if it's first loggin
                 if "logging" not in self.parameters:
                     self.parameters["logging"] = dict()
-                # then read each logfile to produce
+                # then read each logfile that has to be produced
                 [self.parameters["logging"].update(
-                 {filename: source["logging"][filename]})
+                 {filename: [ut.Variable(item) for item in source["logging"][filename]]})
                  for filename in source["logging"]
                  if source["logging"][filename]
                  and len(source["logging"][filename]) > 0]
@@ -78,12 +80,14 @@ class Model:
         self._build_timeline()
         if self.sim_timeline:  # if is an instance of a dynamic model
             self._build_simulation_helpers()
-            helper = {v for v in self.sim_step_todo}
-            sim_types = {'names': [h.name for h in helper],
+            helper = {h.name for h in self.sim_step_todo}
+            if "logging" in self.parameters and self.parameters["logging"]:
+                for log_file in self.parameters["logging"]:
+                    helper |= {h.name for h in self.parameters["logging"][log_file]}
+            sim_types = {'names': list(helper),
                          'formats': ['float'] * len(helper)}
             self.sim_data = numpy.full(len(self.sim_timeline), numpy.nan, dtype=sim_types)
-        else:
-            self.sim_data = {v:0 for v in self.parameters["simulation"]["inputs"]}
+
 
         # load external source if any
         if "external" in self.parameters:
@@ -116,9 +120,10 @@ class Model:
             #candidates = new_candidates
             if not candidates:
                 break
-            # print('Candidates2: ' + str(candidates))  # TODO
-            index_of_targets = [int(v.index) for v in candidates
-                                if v.is_absolutely_indexed]
+            # print('Candidates2: ' + str(candidates))  # TODO
+            index_of_targets = [int(num) for v in candidates if v.is_absolutely_indexed
+                                for num in v.index.split(':') if num]
+
         if not index_of_targets:
             # this instance is not a dynamic model
             self.sim_timeline = None
@@ -272,29 +277,26 @@ class Model:
                 # print("self.sim_data:", self.sim_data)  # TODO
 
     def _treat_input_data(self, data):
-        # if is not an instance of a dynamic model
-        if not self.sim_timeline:
-            for v, el in zip(self.parameters["simulation"]["inputs"],
-                             (float(el) for el in data.split())):
-                self.sim_data[v] = el
-        #    print("self.sim_data: " + str(self.sim_data))  # TODO
-            return
-        # otherwise: dynamic inputs
         for v, el in zip(self.parameters["simulation"]["inputs"],
                          (float(el) for el in data.split())):
-            if v.is_absolutely_indexed:
-                idx = int(v.index)
-            else:
-                idx = v.delay + self.current_step
-            self.sim_data[v.name][idx] = el
+            if self.sim_timeline and v.is_indexed:
+                if v.is_absolutely_indexed:
+                    idx = int(v.index)
+                else:
+                    idx = v.delay + self.current_step
+                self.sim_data[v.name][idx] = el
+            self.input_data[v] = el
         # print("self.sim_data: " + str(self.sim_data))  # TODO
 
     def _calculate(self, target, delta_t=0):
         t = self.current_step + delta_t
         # print("calculating", target, "at t =", t)  # TODO
         # given as input to the program
-        if not self.sim_timeline and target in self.sim_data:
-            return self.sim_data[target]
+        if target in self.parameters["simulation"]["inputs"]:
+            if target.is_indexed:
+                return self.sim_data[target][int(target.index)]
+            else:
+                return self.input_data[target]
         # already calculated
         if self.sim_timeline and target.name in self.sim_data.dtype.names:
             idx = 0
@@ -310,7 +312,7 @@ class Model:
                     return value
             except ValueError:  # is sliced!
                 assert target.is_sliced
-                stuff = [int(s) for s in target.index.split(':')]
+                stuff = [int(s) for s in target.index.split(':') if s]
                 value = self.sim_data[target.name][slice(*stuff)]  # splat operator (LOL)
                 if not any(math.isnan(v) for v in value):
                     # print("for", target, "found", value)  # TODO
@@ -332,9 +334,9 @@ class Model:
             # print("for", target, "found", self.functions[target].calculate())  # TODO
             return self.functions[target].calculate()
         # if has absolute index, but we didnt find it already evaluated in sim_data
-        if target.is_absolutely_indexed:
+        #if target.is_absolutely_indexed:
             # print("for", target, "found", self._calculate(target, delta_t))  # TODO
-            return self._calculate(target, delta_t)
+        #    return self._calculate(target, delta_t)
         # if is relatively indexed but the current value is in the functions
         if target.is_relatively_indexed:
             actualized_target = target.actualize(t)
@@ -413,8 +415,8 @@ class Model:
                                   key=ut.alphanum_key)
                 splitted_log = os.path.splitext(old_logs[-1])
                 new_name = splitted_log[0].rsplit('_', 1)
-                if len(new_name) == 1:
-                    new_name = new_name[0] + '_1' + splitted_log[1]
+                if len(new_name) == 1 or not new_name[1].isdigit():
+                    new_name = splitted_log[0] + '_1' + splitted_log[1]
                 else:
                     new_name = new_name[0] + '_' + str(int(new_name[1]) + 1) + splitted_log[1]
                 with open(new_name, "x", newline='') as f:
@@ -432,7 +434,8 @@ class Model:
         items = self.parameters["logging"][log_name]
         logger.writerow(['# t'] + items)
         for t in self.sim_timeline:
-            logger.writerow([t] + list(self.sim_data[items][t]))
+            datas = [self.sim_data[d.name][t] for d in items]
+            logger.writerow([t] + list(datas))
 
 
 if __name__ == "__main__":

@@ -115,6 +115,22 @@ def test_leslie_dataset_file():
     assert lines == 12
 
 
+def test_lake():
+    """ test_lake.yml """
+    from subprocess import Popen, PIPE, STDOUT
+    p = Popen(["pydmmt/pydmmt.py", "examples/test_lake.yml"], stdin=PIPE,
+              stdout=PIPE, stderr=STDOUT)
+    output = p.communicate(".3".encode('utf-8'))[0]
+    # trim the '\n' newline char
+    print(output[:-1].decode('utf-8'))
+    results = [float(l) for l in output[:-1].decode('utf-8').split()]
+    assert abs(results[0] - 82.2109988777) < 0.000001
+    assert abs(results[1] - 10.2356902357) < 0.000001
+    assert abs(results[2] - 0.0) < 0.000001
+    assert abs(results[3] - 9.76430976431) < 0.000001
+    assert p.returncode >= 0
+
+
 """
 Test the internal components
 """
