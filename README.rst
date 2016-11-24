@@ -1,14 +1,16 @@
-=============================
+===================================
 Dynamic Meta Models Tools in Python
-=============================
+===================================
 
-.. image:: https://badge.fury.io/py/pydmmt.png
+..
+  image:: https://badge.fury.io/py/pydmmt.png
     :target: http://badge.fury.io/py/pydmmt
 
 .. image:: https://travis-ci.org/Lordmzn/pydmmt.svg?branch=master
     :target: https://travis-ci.org/lordmzn/pydmmt
 
-.. image:: https://pypip.in/d/pydmmt/badge.png
+..
+  image:: https://pypip.in/d/pydmmt/badge.png
     :target: https://pypi.python.org/pypi/pydmmt
 
 
@@ -18,6 +20,11 @@ in Python.
 
 Features
 --------
+
+* Equation based model definition: just write a structured text file (`YAML
+  <http://yaml.org>`_) containing the mathematical equations that
+  define the model. Identify entry points as well as expected outputs.
+  It's a piece of cake!
 
 * External inputs: load data from .csv files.
   Files are identified via the keys of an associate arrays within the field

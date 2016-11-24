@@ -5,8 +5,10 @@ import operator as op
 import re
 import string
 
+
 class YAMLError(ValueError):
     """YAML error"""
+
 
 class TextBased():
     def __repr__(self):
@@ -20,6 +22,7 @@ class TextBased():
 
     def __eq__(self, other):
         return self.original_string == other.original_string
+
 
 class Variable(TextBased):
     def __init__(self, text):
@@ -37,7 +40,8 @@ class Variable(TextBased):
         self.is_indexed = '[' in text and ']' in text
         if self.is_indexed:
             self.index = text.split('[')[1].split(']')[0]
-            if any((l != 't' and l in string.ascii_letters) for l in self.index):
+            if any((l != 't' and l in string.ascii_letters)
+                   for l in self.index):
                 raise ValueError("Using wrong index variable in " + text)
             self.name = text.split('[')[0]
             self.is_relatively_indexed = 't' in self.index
@@ -54,7 +58,7 @@ class Variable(TextBased):
             return Variable(self.name + '[' + str(index + self.delay) + ']')
         if self.is_absolutely_indexed:
             return self
-        raise WTFError
+        raise YAMLError
 
     @staticmethod
     def is_it(text):
@@ -87,15 +91,23 @@ class Function(TextBased):
                  ast.Div: op.truediv, ast.Pow: _power, ast.USub: op.neg}
     operators_string = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*',
                         ast.Div: '/', ast.Pow: '^', ast.USub: '-'}
-    accepted_functions = {"sum":sum, "max":max, "min":min, "mean":mean}
-    accepted_tree_nodes = (ast.Num, ast.BinOp, ast.UnaryOp, ast.Subscript,
-                           ast.Index, ast.Slice, ast.Load) + tuple(operators.keys())
+    accepted_functions = {"sum": sum, "max": max, "min": min, "mean": mean}
+    accepted_tree_nodes = ((ast.Num, ast.BinOp, ast.UnaryOp, ast.Subscript,
+                           ast.Index, ast.Slice, ast.Load) +
+                           tuple(operators.keys()))
 
     def __init__(self, text):
         self.original_string = text
-        equation_sides = text.replace(')',' ').replace('(',' ').replace(',',' ').split('=')
-        self.outputs = [Variable(el) for el in equation_sides[0].split() if Variable.is_it(el)]
-        self.inputs = [Variable(el) for el in equation_sides[1].split() if Variable.is_it(el)]
+        equation_sides = text.replace(')', ' ')\
+                             .replace('(', ' ')\
+                             .replace(',', ' ')\
+                             .split('=')
+        self.outputs = [Variable(el)
+                        for el in equation_sides[0].split()
+                        if Variable.is_it(el)]
+        self.inputs = [Variable(el)
+                       for el in equation_sides[1].split()
+                       if Variable.is_it(el)]
 
         # parse the text and store the result
         # power operator: change ^ in **
@@ -108,9 +120,9 @@ class Function(TextBased):
             raise YAMLError("I'm screwed")
         tree = Function.SubstituteVariables(self).visit(tree)
         ast.fix_missing_locations(tree)
-        self.compiled = compile(tree, filename="<util.py: compiling function "
-                                                + self.original_string + ">",
-                                mode="eval")
+        a_useful_name = ("<util.py: compiling function " +
+                         self.original_string + ">")
+        self.compiled = compile(tree, filename=a_useful_name, mode="eval")
 
     @staticmethod
     def _check_tree(tree, variables):
@@ -161,7 +173,8 @@ class Function(TextBased):
             if isinstance(node.slice, ast.Slice):
                 if isinstance(node.slice.lower, ast.Num):
                     if isinstance(node.slice.upper, ast.Num):
-                        var_str += '[' + str(node.slice.lower.n) + ':' + str(node.slice.upper.n) + ']'
+                        var_str += ('[' + str(node.slice.lower.n) + ':' +
+                                    str(node.slice.upper.n) + ']')
                     elif not node.slice.upper:
                         var_str += '[' + str(node.slice.lower.n) + ':]'
                 elif not node.slice.lower:
@@ -171,7 +184,6 @@ class Function(TextBased):
                         var_str += '[:]'
                 else:
                     raise NotImplementedError(ast.dump(node))
-            # print("input ", Variable(var_str), " recognized? ", Variable(var_str) in self.f.inputs)  # TODO
             if Variable(var_str) not in self.f.inputs:
                 print(Variable(var_str), "in", self.f.inputs)  # TODO
                 raise YAMLError(ast.dump(node))
@@ -181,38 +193,30 @@ class Function(TextBased):
             new_node = ast.parse(text, mode="eval").body
             ast.copy_location(new_node, node)
             ast.fix_missing_locations(new_node)
-            # print(ast.dump(new_node))  # TODO
+            # print(ast.dump(new_node))  # TODO
             return new_node
 
         def visit_Name(self, node):
             # substitute names with variables - works only for non subscript
             if node.id in Function.accepted_functions:
                 return node
-            # print("input var recognized? ", Variable(node.id) in self.f.inputs)  # TODO
             if Variable(node.id) not in self.f.inputs:
                 raise YAMLError(ast.dump(node))
-            text = ("self.inputs[" + str(self.f.inputs.index(Variable(node.id))) +
+            text = ("self.inputs[" +
+                    str(self.f.inputs.index(Variable(node.id))) +
                     "].value")
             new_node = ast.parse(text, mode="eval").body
             ast.copy_location(new_node, node)
             ast.fix_missing_locations(new_node)
-            # print(ast.dump(new_node))  # TODO
+            # print(ast.dump(new_node))  # TODO
             return new_node
 
     def calculate(self):
         return eval(self.compiled)
 
-    @classmethod
-    def is_accepted_function(cls, text):
-        return text.split('(')[0] in accepted_functions
-
-    @classmethod
-    def is_operator(cls, text):
-        return text in operators_string
-
 
 # sorting files in human sorting
-# source: http://stackoverflow.com/questions/4623446/how-do-you-sort-files-numerically
+# http://stackoverflow.com/questions/4623446/how-do-you-sort-files-numerically
 def alphanum_key(s):
     """ Turn a string into a list of string and number chunks.
         "z23a" -> ["z", 23, "a"]
