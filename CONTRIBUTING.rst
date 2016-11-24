@@ -58,7 +58,7 @@ Get Started!
 Ready to contribute? Here's how to set up `pydmmt` for
 local development.
 
-1. Fork_ the `pydmmt` repo on GitHub.
+1. Fork the `pydmmt` repo on GitHub.
 2. Clone your fork locally::
 
     $ git clone git@github.com:your_name_here/pydmmt.git
@@ -94,8 +94,6 @@ If you don't have virtualenv, just $ pip install virtualenv.
     $ git push origin name-of-your-bugfix-or-feature
 
 7. Submit a pull request through the GitHub website.
-
-.. _Fork: https://github.com/lordmzn/pydmmt/fork
 
 Pull Request Guidelines
 -----------------------
