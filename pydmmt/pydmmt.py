@@ -249,11 +249,7 @@ class Model:
                 self.sim_data[header][t] = item
         return True
 
-    def process_input(self):
-        try:
-            input_data = input()
-        except EOFError:
-            return False
+    def process_input(self, input_data):
         self._treat_input_data(input_data)
         # perform the simulation, if the current model requires it
         if self.sim_timeline:
@@ -265,8 +261,7 @@ class Model:
         if "logging" in self.parameters:
             self.print_logs()
         # deliver results
-        print(' '.join([str(el) for el in result]))
-        return True
+        return ' '.join([str(el) for el in result])
 
     def run_simulation(self):
         # should be for each clock, not for each timestep
@@ -422,6 +417,8 @@ if __name__ == "__main__":
                         nargs='*')
 
     model = Model(vars(parser.parse_args()))
-    while model.process_input():
+    try:
+        while True:
+            print(model.process_input(input()))
+    except EOFError:
         pass
-    # print("Job done")  # TODO

@@ -38,13 +38,10 @@ def test_fibonacci():
 
 def test_fibonacci_simulation_data():
     """ fibonacci.yml plus production of simulation data file """
-    from subprocess import Popen, PIPE, STDOUT
-    p = Popen(["pydmmt/pydmmt.py", "examples/fibonacci.yml"], stdin=PIPE,
-              stdout=PIPE, stderr=STDOUT)
-    output = p.communicate(" ".encode('utf-8'))[0]
-    # trim the '\n' newline char
-    print(output[:-1].decode('utf-8'))
-    assert p.returncode >= 0
+    model = pydmmt.Model({"sources": ["examples/fibonacci.yml"]})
+    output = model.process_input(" ")
+    print(output)
+    # analyze simulation data produce
     from pathlib import Path
     import csv
     # simulation contains only F
@@ -75,30 +72,22 @@ def test_fibonacci_simulation_data():
 
 def test_leslie():
     """ leslie.yml """
-    from subprocess import Popen, PIPE, STDOUT
-    p = Popen(["pydmmt/pydmmt.py", "examples/leslie.yml"], stdin=PIPE,
-              stdout=PIPE, stderr=STDOUT)
-    output = p.communicate("40 0 20".encode('utf-8'))[0]
-    # trim the '\n' newline char
-    print(output[:-1].decode('utf-8'))
-    results = [float(l) for l in output[:-1].decode('utf-8').split()]
+    model = pydmmt.Model({"sources": ["examples/leslie.yml"]})
+    output = model.process_input("40 0 20")
+    print(output)
+    results = [float(l) for l in output.split()]
     assert abs(results[0] - 875.8826106880001) < 0.000001
     assert abs(results[1] - 1.333728647970054) < 0.000001
-    assert p.returncode >= 0
 
 
 def test_leslie_dataset_file():
     """ leslie_inputs.yml with inputs """
-    from subprocess import Popen, PIPE, STDOUT
-    p = Popen(["pydmmt/pydmmt.py", "examples/leslie_inputs.yml"], stdin=PIPE,
-              stdout=PIPE, stderr=STDOUT)
-    output = p.communicate("40 0 20".encode('utf-8'))[0]
-    # trim the '\n' newline char
-    print(output[:-1].decode('utf-8'))
-    results = [float(l) for l in output[:-1].decode('utf-8').split()]
+    model = pydmmt.Model({"sources": ["examples/leslie_inputs.yml"]})
+    output = model.process_input("40 0 20")
+    print(output)
+    results = [float(l) for l in output.split()]
     assert abs(results[0] - 3264.85815961) < 0.000001
     assert abs(results[1] - 1.30176322374) < 0.000001
-    assert p.returncode >= 0
     from pathlib import Path
     import csv
     # simulation contains only F
@@ -117,18 +106,14 @@ def test_leslie_dataset_file():
 
 def test_lake():
     """ test_lake.yml """
-    from subprocess import Popen, PIPE, STDOUT
-    p = Popen(["pydmmt/pydmmt.py", "examples/test_lake.yml"], stdin=PIPE,
-              stdout=PIPE, stderr=STDOUT)
-    output = p.communicate(".3".encode('utf-8'))[0]
-    # trim the '\n' newline char
-    print(output[:-1].decode('utf-8'))
-    results = [float(l) for l in output[:-1].decode('utf-8').split()]
+    model = pydmmt.Model({"sources": ["examples/test_lake.yml"]})
+    output = model.process_input(".3")
+    print(output)
+    results = [float(l) for l in output.split()]
     assert abs(results[0] - 82.2109988777) < 0.000001
     assert abs(results[1] - 10.2356902357) < 0.000001
     assert abs(results[2] - 0.0) < 0.000001
     assert abs(results[3] - 9.76430976431) < 0.000001
-    assert p.returncode >= 0
 
 
 """
