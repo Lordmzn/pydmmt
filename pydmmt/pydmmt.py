@@ -330,7 +330,13 @@ class Model:
                 v.value = self._calculate(v, delta_t)
                 if (v.is_indexed and not v.is_sliced and
                         v.name in self.sim_data.dtype.names):
-                    self.sim_data[v.name][t + v.delay] = v.value
+                    try:
+                        self.sim_data[v.name][t + v.delay] = v.value
+                    except TypeError as err:
+                        if err.args[0][:24] != "unsupported operand type":
+                            raise err
+                        assert v.is_absolutely_indexed
+                        self.sim_data[v.name][t] = v.value
             # then calculate
             return self.functions[target].calculate()
         # if is relatively indexed but the current value is in the functions
@@ -349,15 +355,24 @@ class Model:
                     s -= i
                 delay = target.delay + s
                 if delay > 0:
-                    delay = '+' + str(delay)
+                    delay = 't+' + str(delay)
+                elif delay == 0:
+                    delay = 't'
                 else:
-                    delay = str(delay)
-                alternative_target = ut.Variable(target.name + '[t' +
+                    delay = 't' + str(delay)
+                alternative_target = ut.Variable(target.name + '[' +
                                                  delay + ']')
-                # print("alternative_target:", alternative_target)
+                # print("alternative_target:", alternative_target)  # TODO
                 if alternative_target in self.functions:
+                    if alternative_target.delay == 0:
+                        absolute_target = ut.Variable(target.name + '[0]')
+                        if absolute_target in self.functions:
+                            return self._calculate(absolute_target, delta_t)
                     diff_t = target.delay - alternative_target.delay + delta_t
                     return self._calculate(alternative_target, diff_t)
+        # it's the t
+        if target == ut.Variable("t"):
+            return t
         # eventually, give up
         raise ValueError("Variable", target, "is not evaluable.")
 

@@ -88,9 +88,11 @@ def mean(a):
 class Function(TextBased):
     # supported operators and functions
     operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
-                 ast.Div: op.truediv, ast.Pow: _power, ast.USub: op.neg}
+                 ast.Div: op.truediv, ast.FloorDiv: op.floordiv,
+                 ast.Pow: _power, ast.USub: op.neg, ast.Mod: op.mod}
     operators_string = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*',
-                        ast.Div: '/', ast.Pow: '^', ast.USub: '-'}
+                        ast.Div: '/', ast.FloorDiv: '//', ast.Pow: '^',
+                        ast.USub: '-', ast.Mod: '%'}
     accepted_functions = {"sum": sum, "max": max, "min": min, "mean": mean}
     accepted_tree_nodes = ((ast.Num, ast.BinOp, ast.UnaryOp, ast.Subscript,
                            ast.Index, ast.Slice, ast.Load) +
@@ -168,22 +170,27 @@ class Function(TextBased):
                 # else if var[t]
                 elif isinstance(node.slice.value, ast.Name):
                     var_str += 't'
+                # else if var[9]
+                elif isinstance(node.slice.value, ast.Num):
+                    var_str += str(node.slice.value.n)
                 var_str += ']'
             # if var[1:12] or var[:12] or var [123:]
             if isinstance(node.slice, ast.Slice):
+                var_str += '['
                 if isinstance(node.slice.lower, ast.Num):
                     if isinstance(node.slice.upper, ast.Num):
-                        var_str += ('[' + str(node.slice.lower.n) + ':' +
-                                    str(node.slice.upper.n) + ']')
+                        var_str += (str(node.slice.lower.n) + ':' +
+                                    str(node.slice.upper.n))
                     elif not node.slice.upper:
-                        var_str += '[' + str(node.slice.lower.n) + ':]'
-                elif not node.slice.lower:
-                    if isinstance(node.slice.upper, ast.Num):
-                        var_str += '[:' + str(node.slice.upper.n) + ']'
-                    elif not node.slice.upper:
-                        var_str += '[:]'
+                        var_str += str(node.slice.lower.n) + ':'
+                elif isinstance(node.slice.upper, ast.Num):  # but not lower
+                    var_str += ':' + str(node.slice.upper.n)
+                elif not node.slice.lower and not node.slice.upper:
+                    # they're there but equal to None
+                    var_str += ':'
                 else:
                     raise NotImplementedError(ast.dump(node))
+                var_str += ']'
             if Variable(var_str) not in self.f.inputs:
                 print(Variable(var_str), "in", self.f.inputs)  # TODO
                 raise YAMLError(ast.dump(node))

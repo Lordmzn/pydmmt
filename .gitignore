@@ -45,3 +45,6 @@ output/*/index.html
 docs/_build
 .cache/v/cache
 *simulation*.log
+
+# IPython
+.ipynb_checkpoints
