@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """pydmmt performs numerical simulations of dynamic systems."""
 
+from collections import OrderedDict
 import csv
 import glob
 import itertools
 import math
 import numpy
 import os
+import sys
 # local import
 import util as ut
 
@@ -163,7 +165,8 @@ class Model:
                                    if v.is_indexed}
         if not unindex_leaves:
             raise ValueError("Impossible simulation asked for.")
-        self.sim_step_todo = list()
+        self.sim_step_todo = OrderedDict()
+        # import pdb; pdb.set_trace()
         # print("unindex_leaves: " + str(unindex_leaves))  # TODO
         for leaf in unindex_leaves:
             # stupid way of using a dict...
@@ -182,7 +185,7 @@ class Model:
                 precursors += [v for v in self.functions[leaf].inputs
                                if v.is_relatively_indexed]
                 # print("Prec0: " + str(precursors))  # TODO
-            # print("Prec1: " + str(precursors))  # TODO
+            # print("Prec1: ", precursors)  # TODO
             while precursors:
                 dude = precursors.pop()
                 if dude in self.functions:
@@ -192,12 +195,11 @@ class Model:
                                        v not in precursors)]
                     # the dude is added only if is a target to be evaluated
                     if dude not in self.sim_step_todo:
-                        self.sim_step_todo.append(dude)
-                # print("Prec2: " + str(precursors))  # TODO
-                # print("sim_step_todo0: " + str(self.sim_step_todo))  # TODO
+                        self.sim_step_todo.update({dude: None})
+                elif dude.is_relatively_indexed:
+                    # but in a function -> leaf of the step
+                    self.sim_step_todo.update({dude: None})
 
-        # print("sim_step_todo1: " + str(self.sim_step_todo))  # TODO
-        # then
         index_of_todo_list = [v.delay for v in self.sim_step_todo]
         self.clock_period = max(index_of_todo_list) - min(index_of_todo_list)
         # print("self.clock_period: " + str(self.clock_period))  # TODO
@@ -278,16 +280,23 @@ class Model:
                 # print("self.sim_data:", self.sim_data)  # TODO
 
     def _treat_input_data(self, data):
-        for v, el in zip(self.parameters["simulation"]["inputs"],
-                         (float(el) for el in data.split())):
+        data = data.split()
+        for v in self.parameters["simulation"]["inputs"]:
+            if hasattr(v, "length"):
+                # extract the required data
+                try:
+                    el = tuple([float(data.pop(0)) for _ in range(v.length)])
+                except IndexError as err:
+                    msg = "pop from empty list"
+                    if err.args[0][-len(msg):] == msg:
+                        self.shutdown()
+            else:
+                el = float(data.pop(0))  # it's scalar
+            # if indexed, add the info also to sim_data
             if self.sim_timeline and v.is_indexed:
-                if v.is_absolutely_indexed:
-                    idx = int(v.index)
-                else:
-                    idx = v.delay + self.current_step
-                self.sim_data[v.name][idx] = el
+                self.sim_data[v.name][int(v.index)] = el
             self.input_data[v] = el
-        # print("self.sim_data: " + str(self.sim_data))  # TODO
+        # print("self.input_data:", self.input_data)  # TODO
 
     def _calculate(self, target, delta_t=0):
         t = self.current_step + delta_t
@@ -362,7 +371,7 @@ class Model:
                     delay = 't' + str(delay)
                 alternative_target = ut.Variable(target.name + '[' +
                                                  delay + ']')
-                # print("alternative_target:", alternative_target)  # TODO
+                # print("alternative_target:", alternative_target)  # TODO
                 if alternative_target in self.functions:
                     if alternative_target.delay == 0:
                         absolute_target = ut.Variable(target.name + '[0]')
@@ -413,9 +422,11 @@ class Model:
             datas = [self.sim_data[d.name][t] for d in items]
             logger.writerow([t] + list(datas))
 
+    def shutdown(self):
+        sys.exit(0)
+
 
 if __name__ == "__main__":
-    import sys
     if sys.version_info < (3, 5):
         raise SystemExit("Sorry, you need at least python 3.5.",
                          "C'mon, middle age is finished!")
@@ -436,4 +447,4 @@ if __name__ == "__main__":
         while True:
             print(model.process_input(input()))
     except EOFError:
-        pass
+        model.shutdown()

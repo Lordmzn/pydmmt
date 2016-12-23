@@ -18,6 +18,12 @@ Provides tools to construct programs that simulate dynamic systems of equations
 in Python.
 
 
+Try it now!
+--------
+
+.. image:: http://mybinder.org/badge.svg :target: http://mybinder.org:/repo/lordmzn/pydmmt
+
+
 Features
 --------
 

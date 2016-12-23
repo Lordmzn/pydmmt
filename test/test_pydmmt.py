@@ -107,14 +107,18 @@ def test_leslie_dataset_file():
 def test_lake():
     """ test_lake.yml """
     model = pydmmt.Model({"sources": ["examples/test_lake.yml"]})
-    output = model.process_input(".3")
-    print(output)
-    results = [float(l) for l in output.split()]
-    assert abs(results[0] - 82.2109988777) < 0.000001
-    assert abs(results[1] - 10.2356902357) < 0.000001
-    assert abs(results[2] - 0.0) < 0.000001
-    assert abs(results[3] - 9.76430976431) < 0.000001
-
+    try:
+        output = model.process_input(".3")
+        print(output)
+        results = [float(l) for l in output.split()]
+        assert abs(results[0] - 82.2109988777) < 0.000001
+        assert abs(results[1] - 10.2356902357) < 0.000001
+        assert abs(results[2] - 0.0) < 0.000001
+        assert abs(results[3] - 9.76430976431) < 0.000001
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError
 
 """
 Test the internal components
@@ -137,7 +141,9 @@ def test_pydmmt_todolist_construction():
     assert not model.sim_step_todo
     #
     model = pydmmt.Model({"sources": ["examples/fibonacci.yml"]})
-    assert {ut.Variable("F[t+2]"), ut.Variable("Fidia[t+2]")} == set(model.sim_step_todo)
+    assert ({ut.Variable("Fidia[t+2]"), ut.Variable("F[t+2]"),
+            ut.Variable("F[t+1]"), ut.Variable("F[t]")} ==
+            set(model.sim_step_todo))
 
 
 def test_pydmmt_graph_construction():

@@ -1,0 +1,39 @@
+# -----------------------------------------------------------------------------
+# File with settings for the MyLittleDam aka TEST from appendix T to 2004 MODSS
+# -----------------------------------------------------------------------------
+
+simulation:
+  target: # defines target for the simulation
+    - "avg_h_excess"
+    - "avg_irr_deficit"
+    - "avg_hyd_deficit"
+    - "avg_r_excess"
+  inputs: ["alfa"]
+
+functions:
+  - "h[t+1] = h[t] + 1/24 * (a[t+1] - r[t+1])"
+  - "r[t+1] = (u[t] if r_max > u[t] else r_max) if r_min < u[t] else r_min"
+  - "r_max = h[t]"
+  - "r_min = h[t] - 100"
+  # - "u[t] = RBF( h[t], nodes=3, uniformizers=[(0,155), (0,155)] )"
+  - "u[t] = u[t-1] if t % 24 != 0 else alfa * h[t]"
+  - "u[0] = alfa * h[0]"
+  - "a[t+1] = 40"
+  - "h[0] = 100"
+  # stepcosts
+  - "h_excess[t+1] = max( h[t] - 50, 0 )"
+  - "irr_deficit[t+1] = max( 50 - r[t+1], 0 )"
+  - "hyd_deficit[t+1] = max( 4.36 - HP, 0 )"
+  # = 1 second * gravity acc * K (of KWh) / 3600000 J per KWh * drop [m] * flux
+  - "HP = 1 * 9.81 * 1000 / 3600000 * h[t] * max( r[t+1] - 0, 0 )"
+  - "r_excess[t+1] = max( r[t+1] - 30, 0 )"
+  # objectives
+  - "avg_h_excess = mean( h_excess[1:2400] )"
+  - "avg_irr_deficit = mean( irr_deficit[2:2401] )"
+  - "avg_hyd_deficit = mean( hyd_deficit[2:2401] )"
+  - "avg_r_excess = mean( r_excess[2:2401] )"
+
+#external:
+
+logging:
+  lake_simulation.log: ["h[t]", "a[t+1]", "u[t]", "r[t+1]"]

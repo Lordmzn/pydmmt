@@ -1,5 +1,6 @@
 """Utilities supporting pydmmt."""
 import ast
+import math
 import numpy
 import operator as op
 import re
@@ -26,7 +27,14 @@ class TextBased():
 
 class Variable(TextBased):
     def __init__(self, text):
-        self.original_string = text
+        if type(text) is not str:
+            for key, value in text.items():
+                self.original_string = key
+                if "length" in value.keys():
+                    self.length = int(value["length"])
+                break  # allow only one cycle = one variable definition
+        else:
+            self.original_string = text
         # this contains only basename if var is indexed
         self.name = self.original_string
         self.index = None
@@ -37,13 +45,15 @@ class Variable(TextBased):
 
         self.value = numpy.nan
 
-        self.is_indexed = '[' in text and ']' in text
+        self.is_indexed = ('[' in self.original_string and
+                           ']' in self.original_string)
         if self.is_indexed:
-            self.index = text.split('[')[1].split(']')[0]
+            self.index = self.original_string.split('[')[1].split(']')[0]
             if any((l != 't' and l in string.ascii_letters)
                    for l in self.index):
-                raise ValueError("Using wrong index variable in " + text)
-            self.name = text.split('[')[0]
+                raise ValueError("Using wrong index variable in " +
+                                 self.original_string)
+            self.name = self.original_string.split('[')[0]
             self.is_relatively_indexed = 't' in self.index
             self.is_absolutely_indexed = 't' not in self.index
             self.is_sliced = ':' in self.index
@@ -62,6 +72,12 @@ class Variable(TextBased):
 
     @staticmethod
     def is_it(text):
+        if type(text) is not str:
+            for key, value in text.items():
+                text = key
+                break  # allow only one definition, discard the rest
+        if text is None or len(text) == 0:
+            return False
         if text[0] not in string.ascii_letters:
             return False
         if '[' in text:
@@ -71,6 +87,8 @@ class Variable(TextBased):
             if text.split('(')[0] in Function.accepted_functions:
                 return False
         if text in Function.accepted_functions:
+            return False
+        if text in Function.accepted_keywords:
             return False
         return True
 
@@ -85,40 +103,71 @@ def mean(a):
     return sum(a) / len(a)
 
 
+def rbf(inputs, param, n_nodes):
+    bases = []
+    idx_p = 0
+    for i in range(n_nodes):
+        temp = []
+        try:
+            for inp in inputs:
+                temp.append((inp - param[idx_p])**2 / param[idx_p+1]**2)
+                idx_p += 2
+        except TypeError as err:
+            # Expecting: TypeError: 'numpy.float64' object is not iterable
+            # it means there's only one input
+            if "iterable" in err.args[0].split():
+                # print(param)
+                temp.append((inputs - param[idx_p])**2 / param[idx_p+1]**2)
+                idx_p += 2
+            else:
+                raise err
+        bases.append(math.exp(-sum(temp)))
+    output = 0
+    for w, base in zip(param[idx_p:idx_p+n_nodes], bases):
+        output += base * w
+    idx_p += n_nodes
+    return output + param[idx_p]
+
+
 class Function(TextBased):
     # supported operators and functions
-    operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
-                 ast.Div: op.truediv, ast.FloorDiv: op.floordiv,
-                 ast.Pow: _power, ast.USub: op.neg, ast.Mod: op.mod}
-    operators_string = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*',
-                        ast.Div: '/', ast.FloorDiv: '//', ast.Pow: '^',
-                        ast.USub: '-', ast.Mod: '%'}
-    accepted_functions = {"sum": sum, "max": max, "min": min, "mean": mean}
+    accepted_functions = {"sum": sum, "max": max, "min": min, "mean": mean,
+                          "rbf": rbf}
     accepted_tree_nodes = ((ast.Num, ast.BinOp, ast.UnaryOp, ast.Subscript,
-                           ast.Index, ast.Slice, ast.Load) +
-                           tuple(operators.keys()))
+                           ast.Index, ast.Slice, ast.Load, ast.IfExp,
+                           ast.Compare) +
+                           (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv,
+                            ast.Pow, ast.USub, ast.Mod, ast.Lt, ast.Gt,
+                            ast.NotEq, ast.Eq))
+    accepted_keywords = {"if": None, "else": None}
 
     def __init__(self, text):
         self.original_string = text
         equation_sides = text.replace(')', ' ')\
                              .replace('(', ' ')\
                              .replace(',', ' ')\
-                             .split('=')
+                             .split('=', maxsplit=1)
         self.outputs = [Variable(el)
                         for el in equation_sides[0].split()
                         if Variable.is_it(el)]
-        self.inputs = [Variable(el)
+        # take care of keyword arguments for function (mean(3,5,w=23))
+        self.inputs = [Variable(el.split('=')[-1])
                        for el in equation_sides[1].split()
-                       if Variable.is_it(el)]
+                       if Variable.is_it(el.split('=')[-1])]
 
         # parse the text and store the result
         # power operator: change ^ in **
-        text = text.split('=')[1].lstrip()
+        text = text.split('=', maxsplit=1)[1].lstrip()
         text = text.replace('^', '**')
-        tree = ast.parse(text, mode="eval")
+        try:
+            tree = ast.parse(text, mode="eval")
+        except SyntaxError as exc:
+            print("While parsing:", text, ";")
+            raise exc
         tree.lineno = 0
         tree.col_offset = 0
         if not Function._check_tree(tree, self.inputs):
+            print("While parsing of:", text, ";")
             raise YAMLError("I'm screwed")
         tree = Function.SubstituteVariables(self).visit(tree)
         ast.fix_missing_locations(tree)
@@ -136,6 +185,9 @@ class Function(TextBased):
                 if node.func.id not in Function.accepted_functions:
                     print("call", ast.dump(node))  # TODO
                     return False
+                continue
+            elif isinstance(node, ast.keyword):
+                continue
             elif isinstance(node, ast.Name):
                 if node.id in Function.accepted_functions:
                     continue
